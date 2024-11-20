@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <algorithm>
 #include <conio.h>
+#include <unordered_map>
 using namespace std;
 class Question
 {
@@ -60,7 +61,7 @@ class Category
 public:
     string name;
     vector<Question> questions;
-
+    bool choosen = false;
     Category(string n) : name(n) {}
 };
 void displayHangman(int incorrectGuesses, int score)
@@ -163,15 +164,19 @@ int length(string a)
     }
     return num;
 }
-void playGame(const vector<Category> &categories)
+int playGame(vector<Category> &categories)
 {
     int wins = 0;
+label:
     cout << "------------------------------------------------------------------------------------------------------------------------------------------------------------------" << endl;
     cout << setw(84) << "SELECT A CATEGORY\n";
     cout << "------------------------------------------------------------------------------------------------------------------------------------------------------------------" << endl;
     for (size_t i = 0; i < categories.size(); ++i)
     {
-        cout << setw(65) << "[" << i + 1 << "]" << ". " << categories[i].name << endl;
+        if (categories[i].choosen == false)
+        {
+            cout << setw(65) << "[" << i + 1 << "]" << ". " << categories[i].name << endl;
+        }
     }
 
     int categoryIndex;
@@ -181,9 +186,9 @@ void playGame(const vector<Category> &categories)
     if (categoryIndex < 1 || categoryIndex > categories.size())
     {
         cerr << setw(86) << "Invalid category selection!" << endl;
-        return;
+        goto label;
     }
-
+    categories[categoryIndex - 1].choosen = true;
     const Category &selectedCategory = categories[categoryIndex - 1];
     for (size_t i = 0; i < selectedCategory.questions.size(); ++i)
     {
@@ -259,23 +264,232 @@ void playGame(const vector<Category> &categories)
                     cout << setw(padding + len) << q.answer << endl;
                     cout << setw(72) << "You Guessed " << wins << " times correctly!" << endl;
                     cout << "******************************************************************************************************************************************************************" << endl;
-                    exit(0);
+                    return wins;
                 }
             }
         }
         if (correctAnswers == length(q.answer))
             ++wins;
+        if (i == selectedCategory.questions.size() - 1)
+            goto label;
+    }
+}
+class Front
+{
+public:
+    unordered_map<string, string> load()
+    {
+        fstream file("UserInfo.txt", ios::in);
+        unordered_map<string, string> board;
+        string name, password;
+        while (file >> name >> password)
+        {
+            board[name] = password;
+        }
+        file.close();
+        return board;
+    }
+    string login()
+    {
+        cout << "------------------------------------------------------------------------------------------------------------------------------------------------------------------" << endl;
+        cout << setw(76) << "LOGIN" << endl;
+        cout << "------------------------------------------------------------------------------------------------------------------------------------------------------------------" << endl;
+
+        unordered_map<string, string> board = load();
+    secure:
+        string user, user_pass;
+        cout << setw(82) << "Input Username:" << endl;
+        cout << setw(71) << " ";
+        cin >> user;
+        cout << setw(82) << "Input Password:" << endl;
+        cout << setw(71) << "";
+        cin >> user_pass;
+        if (board.find(user) != board.end())
+        {
+            if (board[user] != user_pass)
+            {
+                cout << endl
+                     << setw(91) << "Username or Password is Incorrect\n"
+                     << endl;
+                goto secure;
+            }
+            else
+            {
+                cout << "------------------------------------------------------------------------------------------------------------------------------------------------------------------" << endl;
+                cout << endl
+                     << setw(88) << "Account Login Successfully\n"
+                     << endl;
+                cout << endl;
+                return user;
+            }
+        }
+        else
+        {
+            cout << endl
+                 << setw(89) << "Username or Password is Incorrect\n"
+                 << endl;
+            goto secure;
+        }
+    }
+    string lowerCase(string str)
+    {
+        string s = "";
+        for (char ch : str)
+            s += tolower(ch);
+        return s;
+    }
+    string signup()
+    {
+        unordered_map<string, string> board = load();
+        string user, user_pass;
+        cout << "------------------------------------------------------------------------------------------------------------------------------------------------------------------" << endl;
+        cout << setw(77) << "SIGNUP" << endl;
+        cout << "------------------------------------------------------------------------------------------------------------------------------------------------------------------" << endl;
+
+        while (1)
+        {
+            cout << setw(82) << "Input Username:" << endl;
+            cout << setw(71) << "";
+            cin >> user;
+            user = lowerCase(user);
+            if (board.find(user) != board.end())
+                cout << endl
+                     << setw(86) << "Username not available\n"
+                     << endl;
+            else
+                break;
+        }
+        fstream file("UserInfo.txt", ios::app);
+        cout << setw(82) << "Input Password:" << endl;
+        cout << setw(71) << "";
+        cin >> user_pass;
+        cout << "------------------------------------------------------------------------------------------------------------------------------------------------------------------" << endl;
+        cout << endl
+             << setw(89) << "Account created successfully\n"
+             << endl;
+        file << user << ' ' << user_pass << endl;
+        file.close();
+        cout << endl;
+        return user;
+    }
+    unordered_map<string, int> rankLoad()
+    {
+        fstream file("ranking.txt", ios::in);
+        string name;
+        int score;
+        unordered_map<string, int> mp;
+        while (file >> name >> score)
+        {
+            mp[name] = score;
+        }
+        file.close();
+        return mp;
+    }
+    void PlayerScore(string x, int a)
+    {
+        unordered_map<string, int> mp = rankLoad();
+        if (mp.find(x) != mp.end())
+        {
+            int high = mp[x];
+            if (high < a)
+                mp[x] = a;
+        }
+        else
+            mp[x] = a;
+        rankUpdate(mp);
+    }
+    void displayRanking()
+    {
+        fstream file("ranking.txt", ios::in);
+        string name;
+        int score;
+        vector<pair<string, int>> vec;
+        while (file >> name >> score)
+        {
+            vec.push_back({name, score});
+        }
+        file.close();
+        cout << "------------------------------------------------------------------------------------------------------------------------------------------------------------------" << endl;
+
+        cout << setw(60) << "RANK" << setw(20) << "NAME" << right << setw(20) << "SCORE" << endl;
+        cout << "------------------------------------------------------------------------------------------------------------------------------------------------------------------" << endl;
+
+        int i = 1;
+        for (const auto v : vec)
+        {
+            cout << setw(59) << i << '.' << setw(20) << v.first << right << setw(20) << v.second << endl;
+            i++;
+        }
+        cout << "------------------------------------------------------------------------------------------------------------------------------------------------------------------" << endl;
+        cout << endl;
+    }
+    void rankUpdate(unordered_map<string, int> scores)
+    {
+        vector<pair<string, int>> vec(scores.begin(), scores.end());
+        sort(vec.begin(), vec.end(), [](const auto &a, const auto &b)
+             { return a.second > b.second; });
+        fstream file("ranking.txt", ios::out);
+        for (const auto &v : vec)
+        {
+            file << v.first << ' ' << v.second << endl;
+        }
+        file.close();
+    }
+};
+void Hangman()
+{
+    while (1)
+    {
+        int opt, score;
+        string name;
+        class Front security;
+        vector<Category> categories = loadCategories("categories.txt");
+        if (categories.empty())
+        {
+            cerr << setw(100) << "No categories loaded. Please check the file." << endl;
+            return;
+        }
+        cout << "------------------------------------------------------------------------------------------------------------------------------------------------------------------" << endl;
+        cout << setw(82) << "THE HANGMAN GAME" << endl;
+        cout << "------------------------------------------------------------------------------------------------------------------------------------------------------------------" << endl;
+
+        cout << setw(78) << "[1] LOGIN" << endl;
+        cout << setw(79) << "[2] SIGNUP" << endl;
+        cout << setw(84) << "[3] LEADERBOARD" << endl;
+        cout << setw(77) << "[4] EXIT" << endl;
+        cout << setw(65) << "";
+        cin >> opt;
+        if (opt == 1)
+        {
+            name = security.login();
+            score = playGame(categories);
+            security.PlayerScore(name, score);
+        }
+        else if (opt == 2)
+        {
+            name = security.signup();
+            score = playGame(categories);
+            security.PlayerScore(name, score);
+        }
+        else if (opt == 3)
+        {
+            security.displayRanking();
+            Hangman();
+        }
+        else if (opt == 4)
+        {
+            cout << setw(79) << "Exiting.." << endl;
+            return;
+        }
+        else
+        {
+            cout << setw(85) << "Invalid Input" << endl;
+            Hangman();
+        }
     }
 }
 int main()
 {
-    vector<Category> categories = loadCategories("categories.txt");
-    if (categories.empty())
-    {
-        cerr << setw(100) << "No categories loaded. Please check the file." << endl;
-        return 1;
-    }
-    playGame(categories);
-
+    Hangman();
     return 0;
 }
