@@ -18,6 +18,6 @@ This is a C++ implementation of the classic Hangman game. Players can log in wit
 ## How to Run
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/hangman-game.git
+   git clone https://github.com/RoshaanT1/hangman-game.git
    cd hangman-game
    ```
